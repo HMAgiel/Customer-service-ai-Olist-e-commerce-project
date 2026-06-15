@@ -42,21 +42,13 @@ data[4].to_csv('/home/hasyim/final_project/Repo-Final-Project-Kelompok-3/data/pr
 data[6]['product_category_name'] = data[6]['product_category_name'].apply(normalize)
 data[6].to_csv('/home/hasyim/final_project/Repo-Final-Project-Kelompok-3/data/process/olist_product_dataset_clean.csv', index=False)
 
-#Bersihkan data review dan ubah format tanggal agar standar
-kol_tanggal = ['review_creation_date', 'review_answer_timestamp']
+#Bersihkan nama di kategori
+data[2]['product_category_name'] = data[2]['product_category_name'].apply(normalize)
+data[2].to_csv('/home/hasyim/final_project/Repo-Final-Project-Kelompok-3/data/process/olist_product_category_dataset_clean.csv', index=False)
+
+#Bersihkan data review dan ubah format agar standar
 kol_review = ['review_comment_title', 'review_comment_message']
-data[0][kol_tanggal] = data[0][kol_tanggal].apply(pd.to_datetime, format='%Y-%m-%d %H:%M:%S')
 for i in kol_review:
     data[0][i] = data[0][i].apply(normalize)
 data[0].to_csv('/home/hasyim/final_project/Repo-Final-Project-Kelompok-3/data/process/olist_order_reviews_dataset_clean.csv', index=False)
 
-data[1]['shipping_limit_date'] = data[1]['shipping_limit_date'].apply(pd.to_datetime, format='%Y-%m-%d %H:%M:%S')
-data[1].to_csv('/home/hasyim/final_project/Repo-Final-Project-Kelompok-3/data/process/olist_order_items_dataset_clean.csv', index=False)
-
-data[2]['product_category_name'] = data[2]['product_category_name'].apply(normalize)
-data[2].to_csv('/home/hasyim/final_project/Repo-Final-Project-Kelompok-3/data/process/product_category_name_translation_clean.csv', index=False)
-
-#data order
-kol_waktu_order = ['order_purchase_timestamp', 'order_approved_at', 'order_delivered_carrier_date', 'order_delivered_customer_date', 'order_estimated_delivery_date']
-data[5][kol_waktu_order] = data[5][kol_waktu_order].apply(pd.to_datetime, format='%Y-%m-%d %H:%M:%S')
-data[5].to_csv('/home/hasyim/final_project/Repo-Final-Project-Kelompok-3/data/process/olist_orders_dataset_clean.csv', index=False)
