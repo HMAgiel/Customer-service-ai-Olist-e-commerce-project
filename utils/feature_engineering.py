@@ -1,10 +1,5 @@
-import glob
 import pandas as pd
-import numpy as npp
-import matplotlib.pyplot as plt
-import os
-import unicodedata
-import re
+from uuid import uuid4
 
 #ubah ke dictionary untuk mapping file lain
 loc_fix = pd.read_csv('/home/hasyim/final_project/Repo-Final-Project-Kelompok-3/data/process/olist_geolocation_dataset_clean.csv')
@@ -48,6 +43,7 @@ for i in kolom_cat:
     )
 product_data = product_data.dropna()
 product_data["product_category_name_english"] = product_data["product_category_name"].map(product_english)
+product_data["product_category_name_english"] = product_data["product_category_name_english"].fillna("Unknow")
 product_data["product_volume"] = product_data["product_length_cm"] * product_data["product_height_cm"] * product_data["product_width_cm"]
 
 def weight_category(berat):
@@ -110,5 +106,11 @@ def shipping_price_caategory(ongkir):
     else:
         return "very expensive"
 
-ordr_item_data["Shipping category"] = ordr_item_data["freight_value"].apply(shipping_price_caategory)
+ordr_item_data["shipping_category"] = ordr_item_data["freight_value"].apply(shipping_price_caategory)
+ordr_item_data["order_item_id"] = [uuid4().hex for _ in range(len(ordr_item_data["order_item_id"]))]
 ordr_item_data.to_csv('/home/hasyim/final_project/Repo-Final-Project-Kelompok-3/data/final/olist_order_items_dataset_final.csv', index=False)
+
+# add id to payment
+payment = pd.read_csv("/home/hasyim/final_project/Repo-Final-Project-Kelompok-3/data/raw/olist_order_payments_dataset.csv")
+payment["payment_id"] = [uuid4().hex for _ in range(len(payment))]
+payment.to_csv('/home/hasyim/final_project/Repo-Final-Project-Kelompok-3/data/final/olist_order_payments_dataset_final.csv', index=False)
