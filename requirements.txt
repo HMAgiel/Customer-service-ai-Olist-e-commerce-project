@@ -1,0 +1,25 @@
+# API
+fastapi==0.115.0
+uvicorn[standard]==0.30.6
+
+# LLM & LangChain
+openai==1.51.0
+langchain==0.3.0
+langchain-openai==0.2.0
+langchain-core==0.3.0
+
+# Vector DB
+qdrant-client==1.11.1
+
+# SQL
+# sqlite3 sudah built-in Python
+
+# Observability
+langfuse==2.57.3
+
+# Streamlit
+streamlit==1.39.0
+
+# Utils
+python-dotenv==1.0.1
+pydantic==2.9.2
