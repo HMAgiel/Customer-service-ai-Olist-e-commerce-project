@@ -9,7 +9,7 @@ from langchain_openai import ChatOpenAI
 from langchain_core.messages import HumanMessage, AIMessage, SystemMessage, ToolMessage
 from langfuse import observe
 
-from agents.tools import search_products, query_database
+from agents.tools import search_products, query_database, hybrid_search
 
 load_dotenv()
 
@@ -20,12 +20,13 @@ llm = ChatOpenAI(
     api_key=os.getenv("OPENAI_API_KEY"),
 )
 
-tools          = [search_products, query_database]
+tools          = [search_products, query_database, hybrid_search]
 llm_with_tools = llm.bind_tools(tools, tool_choice="auto")
 
 tool_map = {
     "search_products": search_products,
     "query_database":  query_database,
+    "hybrid_search":  hybrid_search,
 }
 
 SYSTEM_PROMPT = """You are a helpful AI assistant for Olist, Brazil's largest e-commerce platform.
@@ -44,6 +45,8 @@ You have access to two tools:
    - prices, revenue, order statistics
    - comparing categories or sellers by metrics
    - "berapa", "siapa yang paling", "terbanyak", "tertinggi", "terendah"
+
+3. hybrid_search — gunakan ini untuk pertanyaan yang butuh KOMBINASI filter data terstruktur DAN pencarian produk semantik, contoh: 'produk elektronik dari seller São Paulo yang reviewnya bagus'
 
 CRITICAL RULES:
 - NEVER answer from general knowledge alone — ALWAYS call at least one tool
@@ -84,10 +87,41 @@ def execute_tool(tool_name: str, tool_args: dict) -> str:
     return str(result)
 
 
+# Tambah function ini SEBELUM fungsi run()
+def check_relevance(query: str) -> bool:
+    guard_prompt = """You are a relevance checker for an Olist e-commerce assistant.
+
+    Determine if this query is relevant to:
+    - Olist Brazilian e-commerce data
+    - Product recommendations, categories, reviews  
+    - Seller information, revenue, location
+    - Order statistics, payment data
+    - General greetings or questions about the assistant itself
+
+    Reply ONLY with "RELEVANT" or "IRRELEVANT"."""
+
+    response = llm.invoke([
+            SystemMessage(content=guard_prompt),
+            HumanMessage(content=query)
+        ])
+    return "IRRELEVANT" not in response.content.upper()
+
+
+# Di dalam fungsi run(), tambah ini SEBELUM baris history = _get_history(session_id):
+    if not check_relevance(query):
+        return "Maaf, saya hanya bisa membantu pertanyaan seputar data Olist E-commerce. Silakan tanya tentang produk, seller, kategori, atau transaksi Olist."
+
 # ── Main run ──────────────────────────────────────────────────────────────────
 @observe(name="olist-chat")
 def run(query: str, session_id: str = "default") -> str:
     try:
+        if not check_relevance(query):
+            return (
+                "Maaf, pertanyaan ini di luar konteks dataset Olist. "
+                "Gw hanya bisa bantu analisis data e-commerce Brazil seperti "
+                "produk, pesanan, seller, review, dan pembayaran."
+            )
+        
         history  = _get_history(session_id)
         messages = [SystemMessage(content=SYSTEM_PROMPT)] + history + [HumanMessage(content=query)]
 
@@ -99,6 +133,7 @@ def run(query: str, session_id: str = "default") -> str:
         tool_map = {
             "search_products": search_products,
             "query_database":  query_database,
+            "hybrid_search" : hybrid_search,
         }
 
         for _ in range(5):

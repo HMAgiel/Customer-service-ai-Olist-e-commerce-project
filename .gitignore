@@ -20,10 +20,9 @@ env/
 data/raw/
 data/process/
 data/final/
-data/sql/olist.db
+
 
 # Database
-*.db
 *.sqlite
 
 # VS Code
