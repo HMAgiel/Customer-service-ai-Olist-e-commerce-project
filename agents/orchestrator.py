@@ -14,6 +14,7 @@ from dotenv import load_dotenv
 from langchain_openai import ChatOpenAI
 from langchain_core.messages import HumanMessage, AIMessage, SystemMessage, ToolMessage
 from langfuse import observe
+from agents.prompts import SYSTEM_PROMPT
 
 from agents.tools import search_products, query_database, hybrid_search
 
@@ -34,34 +35,6 @@ tool_map = {
     "query_database":  query_database,
     "hybrid_search":   hybrid_search,
 }
-
-SYSTEM_PROMPT = """You are a helpful AI assistant for Olist, Brazil's largest e-commerce platform.
-You help users explore products, understand market trends, and analyze seller/customer data.
-
-You have access to two tools:
-1. search_products — use this for ANY question about:
-   - product recommendations or suggestions
-   - product categories exploration
-   - finding products by type, use case, or description
-   - product reviews and ratings
-   - sellers in specific cities
-   
-2. query_database — use this for ANY question about:
-   - numbers, counts, totals, averages, rankings
-   - prices, revenue, order statistics
-   - comparing categories or sellers by metrics
-   - "berapa", "siapa yang paling", "terbanyak", "tertinggi", "terendah"
-
-3. hybrid_search — gunakan ini untuk pertanyaan yang butuh KOMBINASI filter data terstruktur DAN pencarian produk semantik, contoh: 'produk elektronik dari seller São Paulo yang reviewnya bagus'
-
-CRITICAL RULES:
-- NEVER answer from general knowledge alone — ALWAYS call at least one tool
-- If question involves both recommendations AND statistics, call BOTH tools
-- When in doubt, call search_products first, then query_database if needed
-- Always respond in the same language the user uses (Indonesian or English)
-- Currency is in Brazilian Real (R$)
-- If a tool returns no results, say so honestly — do not make up data
-"""
 
 
 # ── Prompt Injection Detector ─────────────────────────────────────────────────
@@ -101,6 +74,7 @@ def check_relevance(query: str) -> bool:
     - Seller information, revenue, location
     - Order statistics, payment data
     - General greetings or questions about the assistant itself
+    - Greetings, small talk, or opening messages (e.g. "halo", "hi", "saya bingung mau tanya apa", "apa yang bisa kamu bantu?")
 
     Reply ONLY with "RELEVANT" or "IRRELEVANT"."""
 

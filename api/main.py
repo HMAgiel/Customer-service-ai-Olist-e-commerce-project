@@ -16,6 +16,7 @@ from fastapi.responses import JSONResponse
 from pydantic import BaseModel, field_validator
 import uuid
 import time
+import threading
 from collections import defaultdict
 
 from agents.orchestrator import run, delete_session
@@ -36,26 +37,28 @@ app.add_middleware(
 
 
 # ── Rate Limiter ──────────────────────────────────────────────────────────────
-# Simple in-memory rate limiter: max 20 request per menit per session
+# Thread-safe in-memory rate limiter: max 20 request per menit per session
 _rate_store: dict[str, list[float]] = defaultdict(list)
-RATE_LIMIT     = 20   # max requests
-RATE_WINDOW    = 60   # per detik (1 menit)
+_rate_lock  = threading.Lock()   # cegah race condition di concurrent requests
+RATE_LIMIT  = 20   # max requests
+RATE_WINDOW = 60   # per detik (1 menit)
 
 def check_rate_limit(session_id: str) -> bool:
     """Return True kalau masih dalam batas, False kalau sudah melewati limit."""
     now = time.time()
     window_start = now - RATE_WINDOW
 
-    # Buang timestamp yang sudah di luar window
-    _rate_store[session_id] = [
-        t for t in _rate_store[session_id] if t > window_start
-    ]
+    with _rate_lock:   # atomic: read + check + write tidak bisa diinterupsi thread lain
+        # Buang timestamp yang sudah di luar window
+        _rate_store[session_id] = [
+            t for t in _rate_store[session_id] if t > window_start
+        ]
 
-    if len(_rate_store[session_id]) >= RATE_LIMIT:
-        return False
+        if len(_rate_store[session_id]) >= RATE_LIMIT:
+            return False
 
-    _rate_store[session_id].append(now)
-    return True
+        _rate_store[session_id].append(now)
+        return True
 
 
 # ── Request / Response schemas ────────────────────────────────────────────────
@@ -162,4 +165,4 @@ def clear_session(session_id: str):
 # ── Run lokal ─────────────────────────────────────────────────────────────────
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run("api.main:app", host="0.0.0.0", port=8000, reload=True)
+    uvicorn.run("api.main:app", host="0.0.0.0", port=8000, reload=True, workers=1)

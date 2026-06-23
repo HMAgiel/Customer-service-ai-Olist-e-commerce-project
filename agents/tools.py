@@ -10,6 +10,8 @@ from dotenv import load_dotenv
 from openai import OpenAI
 from qdrant_client import QdrantClient
 from langchain.tools import tool
+from qdrant_client.models import Filter, FieldCondition, MatchAny
+from agents.prompts import SEARCH_PRODUCTS_PROMPT, QUERY_DATABASE_PROMPT, HYBRID_SEARCH_PROMPT, TRANSLATE_PROMPT, DB_SCHEMA
 
 load_dotenv()
 
@@ -25,49 +27,13 @@ COLLECTION_NAME = os.getenv("QDRANT_COLLECTION", "olist_data_3")
 EMBED_MODEL     = "text-embedding-3-small"
 DB_PATH         = os.getenv("DB_PATH", "./data/sql/olist.db")
 
-# Schema SQLite — dikasih ke LLM supaya bisa generate SQL yang valid
-DB_SCHEMA = """
-Tables available in olist.db:
 
-1. customers
-   Columns: customer_id, customer_unique_id, customer_zip_code_prefix,
-            customer_city (TEXT), customer_state (TEXT)
-
-2. product
-   Columns: product_id, product_category_name (TEXT),
-            product_photos_qty, product_weight_g, product_length_cm,
-            product_height_cm, product_width_cm,
-            product_category_name_english (TEXT),
-            product_volume, weight_category (TEXT)
-
-3. seller
-   Columns: seller_id, seller_zip_code_prefix,
-            seller_city (TEXT), seller_state (TEXT)
-
-4. orders
-   Columns: order_id, customer_id, order_status (TEXT),
-            order_purchase_timestamp (TEXT), order_approved_at (TEXT),
-            order_delivered_carrier_date (TEXT), order_delivered_customer_date (TEXT),
-            order_estimated_delivery_date (TEXT),
-            status_delivered (TEXT), order_category_status (TEXT)
-
-5. payments
-   Columns: payment_id, order_id, payment_sequential,
-            payment_type (TEXT), payment_installments, payment_value (REAL)
-
-6. order_items
-   Columns: order_id, order_item_id, product_id, seller_id,
-            shipping_limit_date (TEXT), price (REAL),
-            freight_value (REAL), total_price (REAL),
-            shipping_category (TEXT)
-
-Relationships:
-- orders.order_id = order_items.order_id = payments.order_id
-- order_items.product_id = product.product_id
-- order_items.seller_id = seller.seller_id
-- orders.customer_id = customers.customer_id
-"""
-
+def _translate_output(text: str, prompt: str) -> str:
+    return openai_client.chat.completions.create(
+        model="gpt-4o-mini",
+        messages=[{"role": "user", "content": prompt}],
+        temperature=0,
+    ).choices[0].message.content
 
 # ── Tool 1: RAG — Semantic Search ─────────────────────────────────────────────
 @tool
@@ -76,18 +42,6 @@ def search_products(query: str) -> str:
     Cari dan rekomendasikan produk dari database Olist berdasarkan deskripsi,
     kategori, atau review pelanggan. SELALU gunakan tool ini untuk pertanyaan
     tentang rekomendasi produk, pencarian produk, atau eksplorasi kategori.
-    
-    Gunakan tool ini untuk pertanyaan seperti:
-    - 'rekomendasikan produk untuk dapur' atau 'peralatan dapur'
-    - 'cari produk elektronik yang bagus'
-    - 'produk apa yang reviewnya positif?'
-    - 'ada produk dari seller di São Paulo?'
-    - 'tampilkan produk kategori health and beauty'
-    
-    PENTING: Selalu panggil tool ini untuk request rekomendasi atau pencarian produk.
-    Jangan jawab dari pengetahuan umum — gunakan tool ini untuk cari data nyata.
-    
-    Input: query dalam bahasa natural (Inggris atau Indonesia)
     """
     try:
         # 1. Embed query
@@ -124,18 +78,7 @@ def search_products(query: str) -> str:
                 f"   Info: {p.get('page_content', '')[:300]}...\n"
             )
 
-        # 4. Translate portugese to english
 
-        translate_prompt = f"""Translate this product review text from Portuguese to English. Also translate category names to English (e.g. utilidades_domesticas -> Household Utilities, ferramentas_jardim -> Garden Tools).Keep the format intact:\n{chr(10).join(output_lines)}"""
-        translated = openai_client.chat.completions.create(
-            model="gpt-4o-mini",
-            messages=[{"role": "user", "content": translate_prompt}],
-            temperature=0,
-        ).choices[0].message.content
-        
-        return translated
-    
-        return "\n".join(output_lines)
 
     except Exception as e:
         return f"Error saat melakukan pencarian produk: {str(e)}"
@@ -144,16 +87,7 @@ def search_products(query: str) -> str:
 # ── Tool 2: SQL — Structured Query ────────────────────────────────────────────
 @tool
 def query_database(question: str) -> str:
-    """
-    Jawab pertanyaan yang membutuhkan data terstruktur dari database transaksi Olist.
-    Gunakan tool ini untuk pertanyaan seperti:
-    - 'berapa rata-rata harga produk kategori electronics?'
-    - 'seller mana yang punya total revenue tertinggi?'
-    - 'berapa total order dari kota São Paulo?'
-    - 'kategori apa yang paling banyak ordernya?'
-    - 'berapa jumlah produk dengan review score di atas 4?'
-    Input: pertanyaan dalam bahasa natural (Inggris atau Indonesia)
-    """
+    """Jawab pertanyaan yang membutuhkan data terstruktur dari database transaksi Olist."""
     try:
         # 1. LLM generate SQL dari pertanyaan natural language
         sql_prompt = f"""You are a SQL expert. Generate a valid SQLite query to answer the question below.
@@ -217,14 +151,7 @@ SQL:"""
 # ── Tool 3: Hybrid — SQL filter + RAG search ──────────────────────────────────
 @tool
 def hybrid_search(question: str) -> str:
-    """
-    Jawab pertanyaan yang butuh kombinasi filter data terstruktur (SQL) 
-    DAN pencarian semantik produk (RAG). Gunakan tool ini untuk pertanyaan seperti:
-    - 'produk elektronik dari seller São Paulo yang reviewnya bagus?'
-    - 'ada produk kategori health beauty dengan harga murah dan review positif?'
-    - 'rekomendasi produk dari seller di Rio de Janeiro?'
-    Input: pertanyaan dalam bahasa natural
-    """
+    """Jawab pertanyaan yang butuh kombinasi filter data terstruktur (SQL)"""
     try:
         # Step 1: SQL untuk dapat filter context
         sql_prompt = f"""You are a SQL expert. Generate a SQLite query to extract filter values.
@@ -273,7 +200,6 @@ SQL:"""
         )
         query_vector = embed_response.data[0].embedding
 
-        from qdrant_client.models import Filter, FieldCondition, MatchAny
 
         if categories:
             search_filter = Filter(
@@ -316,15 +242,6 @@ SQL:"""
                 f"   Info: {p.get('page_content', '')[:300]}...\n"
             )
 
-        translate_prompt = f"""Translate this product review text from Portuguese to English.
-Also translate category names to English.
-Keep the format intact:\n{chr(10).join(output_lines)}"""
-        translated = openai_client.chat.completions.create(
-            model="gpt-4o-mini",
-            messages=[{"role": "user", "content": translate_prompt}],
-            temperature=0,
-        ).choices[0].message.content
-        return translated
 
     except Exception as e:
         return f"Error hybrid search: {str(e)}"
