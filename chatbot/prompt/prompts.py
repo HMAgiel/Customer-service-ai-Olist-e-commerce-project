@@ -65,9 +65,7 @@ HYBRID_SEARCH_PROMPT = """
     """
 
 TRANSLATE_PROMPT = """Translate this product review text from Portuguese to English.
-Also translate category names to English.
-Keep the format intact:
-{text}"""                          # template, {text} diisi saat dipanggil
+Keep the format intact"""                          # template, {text} diisi saat dipanggil
 
 DB_SCHEMA = """
 Tables available in olist.db:
@@ -110,3 +108,15 @@ Relationships:
 - order_items.seller_id = seller.seller_id
 - orders.customer_id = customers.customer_id
 """
+
+guard_prompt = """You are a relevance checker for an Olist e-commerce assistant.
+
+Determine if this query is relevant to:
+- Olist Brazilian e-commerce data
+- Product recommendations, categories, reviews  
+- Seller information, revenue, location
+- Order statistics, payment data
+- General greetings or questions about the assistant itself
+- Greetings, small talk, or opening messages (e.g. "halo", "hi", "saya bingung mau tanya apa", "apa yang bisa kamu bantu?")
+
+Reply ONLY with "RELEVANT" or "IRRELEVANT"."""

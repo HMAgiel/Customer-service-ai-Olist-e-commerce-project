@@ -8,32 +8,36 @@ import sqlite3
 import json
 from dotenv import load_dotenv
 from openai import OpenAI
-from qdrant_client import QdrantClient
+
+from chatbot.config import qdrant_client, engine, llm_strict
+from sqlalchemy import text
+from sqlalchemy.exc import SQLAlchemyError
+
+from langchain_core.messages import SystemMessage, HumanMessage
 from langchain.tools import tool
 from qdrant_client.models import Filter, FieldCondition, MatchAny
-from agents.prompts import SEARCH_PRODUCTS_PROMPT, QUERY_DATABASE_PROMPT, HYBRID_SEARCH_PROMPT, TRANSLATE_PROMPT, DB_SCHEMA
+from chatbot.prompt.prompts import SEARCH_PRODUCTS_PROMPT, QUERY_DATABASE_PROMPT, HYBRID_SEARCH_PROMPT, TRANSLATE_PROMPT, DB_SCHEMA
 
 load_dotenv()
 
 # ── Clients ───────────────────────────────────────────────────────────────────
 openai_client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
-qdrant_client = QdrantClient(
-    url=os.getenv("QDRANT_URL"),
-    api_key=os.getenv("QDRANT_API_KEY"),
-    timeout=60,
-)
 
 COLLECTION_NAME = os.getenv("QDRANT_COLLECTION", "olist_data_3")
 EMBED_MODEL     = "text-embedding-3-small"
 DB_PATH         = os.getenv("DB_PATH", "./data/sql/olist.db")
 
+def llm_call(query, prompt):
+    response = llm_strict.invoke([
+        SystemMessage(content=prompt),
+        HumanMessage(content=query)
+    ])
+    messages = response.content
+    return messages
 
-def _translate_output(text: str, prompt: str) -> str:
-    return openai_client.chat.completions.create(
-        model="gpt-4o-mini",
-        messages=[{"role": "user", "content": prompt}],
-        temperature=0,
-    ).choices[0].message.content
+def _translate_output(text: str) -> str:
+    translate = llm_call(query=text, prompt=TRANSLATE_PROMPT)
+    return translate
 
 # ── Tool 1: RAG — Semantic Search ─────────────────────────────────────────────
 @tool
@@ -61,8 +65,6 @@ def search_products(query: str) -> str:
 
         if not results:
             return "Tidak ditemukan produk yang relevan dengan pencarian tersebut."
-                
-        
 
         # 3. Format hasil
         output_lines = [f"Ditemukan {len(results)} produk relevan:\n"]
@@ -77,8 +79,6 @@ def search_products(query: str) -> str:
                 f"   Review score: {review_score}/5\n"
                 f"   Info: {p.get('page_content', '')[:300]}...\n"
             )
-
-
 
     except Exception as e:
         return f"Error saat melakukan pencarian produk: {str(e)}"
@@ -101,51 +101,39 @@ Rules:
 - For text comparisons, use LIKE with % wildcard and LOWER() for case-insensitive
 - ALWAYS use product_category_name_english instead of product_category_name for category display
 - Return ONLY the raw SQL query, no explanation, no markdown, no backticks
+"""
 
-Question: {question}
-SQL:"""
-
-        sql_response = openai_client.chat.completions.create(
-            model="gpt-4o-mini",
-            messages=[{"role": "user", "content": sql_prompt}],
-            temperature=0,      # deterministic untuk SQL generation
-        )
-        sql_query = sql_response.choices[0].message.content.strip()
+        sql_response = llm_call(query=question, prompt=sql_prompt)
+        sql_query = sql_response.strip()
 
         # Hapus markdown code block kalau LLM tetap menambahkannya
         sql_query = sql_query.replace("```sql", "").replace("```", "").strip()
 
-        # 2. Execute SQL ke SQLite
-        conn = sqlite3.connect(DB_PATH)
-        conn.row_factory = sqlite3.Row
-        cursor = conn.cursor()
-
         try:
-            cursor.execute(sql_query)
-            rows = cursor.fetchall()
-        except sqlite3.Error as sql_err:
-            conn.close()
-            return f"SQL error: {sql_err}\nQuery yang dicoba: {sql_query}"
-        finally:
-            conn.close()
-
-        if not rows:
-            return "Query berhasil dijalankan tapi tidak ada data yang ditemukan."
-
-        # 3. Format hasil sebagai teks readable
-        col_names = [description[0] for description in cursor.description]
-        result_lines = [f"Hasil query ({len(rows)} baris):\n"]
-
-        for row in rows[:10]:        # max 10 baris ke LLM
-            row_dict = dict(zip(col_names, row))
-            line = " | ".join(f"{k}: {v}" for k, v in row_dict.items())
-            result_lines.append(f"  • {line}")
-
-        result_lines.append(f"\nSQL yang dijalankan: {sql_query}")
-        return "\n".join(result_lines)
-
+            # 2. Execute SQL ke Turso cloud
+            with engine.connect() as koneksi:
+                result = koneksi.execute(text(sql_query))
+                rows = result.fetchall()
+                
+                if not rows:
+                    return "The query ran successfully, but no data was found"
+                
+                # 3. Format hasil sebagai teks readable
+                result_lines = [f"query result ({len(rows)} rows):\n"]
+                
+                for row in rows[:10]:
+                    row_dict = dict(row._mapping)
+                    line = " | ".join(f"{k}: {v}" for k, v in row_dict.items())
+                    result_lines.append(f"  • {line}")
+                    
+                result_lines.append(f"\nSQL query that run: {sql_query}")
+                return "\n".join(result_lines)
+            
+        except SQLAlchemyError as sql_error:
+            return f"SQL error: {sql_error}\nQuery tried: {sql_query}"
+        
     except Exception as e:
-        return f"Error saat query database: {str(e)}"
+        return f"Error when run query to database: {str(e)}"
     
 
 # ── Tool 3: Hybrid — SQL filter + RAG search ──────────────────────────────────
@@ -162,16 +150,10 @@ Rules:
 - Return ONLY distinct values needed as filters (seller_id, product_category_name_english, seller_city)
 - Use LIMIT 20
 - Return ONLY raw SQL, no markdown
+"""
 
-Question: {question}
-SQL:"""
-
-        sql_response = openai_client.chat.completions.create(
-            model="gpt-4o-mini",
-            messages=[{"role": "user", "content": sql_prompt}],
-            temperature=0,
-        )
-        sql_query = sql_response.choices[0].message.content.strip()
+        sql_response = llm_call(query=question, prompt=sql_prompt)
+        sql_query = sql_response.strip()
         sql_query = sql_query.replace("```sql", "").replace("```", "").strip()
 
         conn = sqlite3.connect(DB_PATH)
@@ -190,8 +172,8 @@ SQL:"""
         categories = set()
         for row in rows:
             row_dict = dict(zip([d[0] for d in cursor.description], row))
-            if "product_category_name_english" in row_dict and row_dict["product_category_name_english"]:
-                categories.add(row_dict["product_category_name_english"])
+            if "product_category_name" in row_dict and row_dict["product_category_name"]:
+                categories.add(row_dict["product_category_name"])
 
         # Step 3: RAG search dengan atau tanpa metadata filter
         embed_response = openai_client.embeddings.create(

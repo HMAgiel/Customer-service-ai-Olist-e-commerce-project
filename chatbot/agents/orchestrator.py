@@ -8,24 +8,21 @@ Security features:
 - check_relevance guard sebelum ReAct loop
 """
 
-import os
-import re
 from dotenv import load_dotenv
-from langchain_openai import ChatOpenAI
 from langchain_core.messages import HumanMessage, AIMessage, SystemMessage, ToolMessage
 from langfuse import observe
-from agents.prompts import SYSTEM_PROMPT
 
-from agents.tools import search_products, query_database, hybrid_search
+from chatbot.config import llm
+
+from chatbot.prompt.prompts import SYSTEM_PROMPT
+
+from chatbot.tools.tools import search_products, query_database, hybrid_search
+
+from chatbot.checker.user_checker import detect_injection, check_relevance
 
 load_dotenv()
 
 # ── LLM + Tools ───────────────────────────────────────────────────────────────
-llm = ChatOpenAI(
-    model="gpt-4o-mini",
-    temperature=0.3,
-    api_key=os.getenv("OPENAI_API_KEY"),
-)
 
 tools          = [search_products, query_database, hybrid_search]
 llm_with_tools = llm.bind_tools(tools, tool_choice="auto")
@@ -35,54 +32,6 @@ tool_map = {
     "query_database":  query_database,
     "hybrid_search":   hybrid_search,
 }
-
-
-# ── Prompt Injection Detector ─────────────────────────────────────────────────
-# Pattern yang sering dipakai untuk prompt injection / jailbreak
-_INJECTION_PATTERNS = [
-    r"ignore\s+(previous|prior|above|all)\s+(instructions?|prompts?|rules?)",
-    r"forget\s+(everything|all|your\s+instructions?)",
-    r"you\s+are\s+now\s+(a\s+)?(?!helpful)",   # "you are now a [something else]"
-    r"act\s+as\s+(if\s+you\s+are\s+)?(?!an?\s+assistant)",
-    r"(reveal|show|print|display|return|give\s+me)\s+(your\s+)?(system\s+prompt|api\s+key|secret|password|token|env)",
-    r"(drop|delete|truncate|alter|insert|update)\s+\w+",  # SQL DDL/DML keywords
-    r"\\n\\n(human|user|assistant)\s*:",        # role injection via newlines
-    r"<\s*(script|iframe|object|embed)",        # HTML injection
-    r"jailbreak",
-    r"DAN\s+mode",                              # "Do Anything Now" jailbreak
-    r"pretend\s+(you\s+)?(have\s+no\s+restrictions?|are\s+unrestricted)",
-]
-
-_INJECTION_REGEX = re.compile(
-    "|".join(_INJECTION_PATTERNS),
-    flags=re.IGNORECASE,
-)
-
-def detect_injection(query: str) -> bool:
-    """Return True kalau query mengandung pola prompt injection."""
-    return bool(_INJECTION_REGEX.search(query))
-
-
-# ── Relevance Checker ─────────────────────────────────────────────────────────
-def check_relevance(query: str) -> bool:
-    """Return True kalau query relevan dengan konteks Olist e-commerce."""
-    guard_prompt = """You are a relevance checker for an Olist e-commerce assistant.
-
-    Determine if this query is relevant to:
-    - Olist Brazilian e-commerce data
-    - Product recommendations, categories, reviews  
-    - Seller information, revenue, location
-    - Order statistics, payment data
-    - General greetings or questions about the assistant itself
-    - Greetings, small talk, or opening messages (e.g. "halo", "hi", "saya bingung mau tanya apa", "apa yang bisa kamu bantu?")
-
-    Reply ONLY with "RELEVANT" or "IRRELEVANT"."""
-
-    response = llm.invoke([
-        SystemMessage(content=guard_prompt),
-        HumanMessage(content=query),
-    ])
-    return "IRRELEVANT" not in response.content.upper()
 
 
 # ── Session Manager ───────────────────────────────────────────────────────────
