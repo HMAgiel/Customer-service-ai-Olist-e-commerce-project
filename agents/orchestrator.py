@@ -14,7 +14,7 @@ from dotenv import load_dotenv
 from langchain_openai import ChatOpenAI
 from langchain_core.messages import HumanMessage, AIMessage, SystemMessage, ToolMessage
 from langfuse import observe
-from agents.prompts import SYSTEM_PROMPT
+from agents.prompt.orchestrator_prompt import ORCHESTRATOR_PROMPT
 
 from agents.tools import search_products, query_database, hybrid_search
 
@@ -138,7 +138,7 @@ def run(query: str, session_id: str = "default") -> str:
 
         # ── ReAct Loop ────────────────────────────────────────────────────────
         history  = _get_history(session_id)
-        messages = [SystemMessage(content=SYSTEM_PROMPT)] + history + [HumanMessage(content=query)]
+        messages = [SystemMessage(content=ORCHESTRATOR_PROMPT)] + history + [HumanMessage(content=query)]
 
         for _ in range(5):
             response = llm_with_tools.invoke(messages)

@@ -11,7 +11,9 @@ from openai import OpenAI
 from qdrant_client import QdrantClient
 from langchain.tools import tool
 from qdrant_client.models import Filter, FieldCondition, MatchAny
-from agents.prompts import SEARCH_PRODUCTS_PROMPT, QUERY_DATABASE_PROMPT, HYBRID_SEARCH_PROMPT, TRANSLATE_PROMPT, DB_SCHEMA
+from agents.prompt.rag_prompt import RAG_PROMPT, TRANSLATE_PROMPT
+from agents.prompt.sql_prompt import SQL_PROMPT, DB_SCHEMA
+from agents.prompt.hybrid_prompt import HYBRID_SQL_PROMPT, HYBRID_RAG_PROMPT
 
 load_dotenv()
 
@@ -38,17 +40,24 @@ def _translate_output(text: str, prompt: str) -> str:
 # ── Tool 1: RAG — Semantic Search ─────────────────────────────────────────────
 @tool
 def search_products(query: str) -> str:
-    """
-    Cari dan rekomendasikan produk dari database Olist berdasarkan deskripsi,
-    kategori, atau review pelanggan. SELALU gunakan tool ini untuk pertanyaan
-    tentang rekomendasi produk, pencarian produk, atau eksplorasi kategori.
-    """
+    """Cari produk Olist menggunakan semantic search."""
     try:
-        # 1. Embed query
+        # Tambah di baris 47, sebelum embed query
+        clarified = openai_client.chat.completions.create(
+            model="gpt-4o-mini",
+            messages=[
+                {"role": "system", "content": RAG_PROMPT},
+                {"role": "user", "content": query}
+            ],
+            temperature=0,
+        ).choices[0].message.content
+        
+        # 1. Gunakan clarified sebagai query ke Qdrant
         embed_response = openai_client.embeddings.create(
-            input=[query],
+            input=[clarified],
             model=EMBED_MODEL,
         )
+        
         query_vector = embed_response.data[0].embedding
 
         # 2. Search Qdrant
@@ -79,6 +88,8 @@ def search_products(query: str) -> str:
             )
 
 
+            translate_prompt = TRANSLATE_PROMPT.format(text="\n".join(output_lines))
+            return _translate_output("\n".join(output_lines), translate_prompt)
 
     except Exception as e:
         return f"Error saat melakukan pencarian produk: {str(e)}"
@@ -89,21 +100,10 @@ def search_products(query: str) -> str:
 def query_database(question: str) -> str:
     """Jawab pertanyaan yang membutuhkan data terstruktur dari database transaksi Olist."""
     try:
-        # 1. LLM generate SQL dari pertanyaan natural language
-        sql_prompt = f"""You are a SQL expert. Generate a valid SQLite query to answer the question below.
-
-Database schema:
-{DB_SCHEMA}
-
-Rules:
-- Use only tables and columns listed in the schema above
-- Always use LIMIT 10 unless the question asks for specific count/sum/avg
-- For text comparisons, use LIKE with % wildcard and LOWER() for case-insensitive
-- ALWAYS use product_category_name_english instead of product_category_name for category display
-- Return ONLY the raw SQL query, no explanation, no markdown, no backticks
-
-Question: {question}
-SQL:"""
+        sql_prompt = SQL_PROMPT.format(
+            question=question,
+            DB_SCHEMA=DB_SCHEMA
+        )
 
         sql_response = openai_client.chat.completions.create(
             model="gpt-4o-mini",
@@ -154,17 +154,10 @@ def hybrid_search(question: str) -> str:
     """Jawab pertanyaan yang butuh kombinasi filter data terstruktur (SQL)"""
     try:
         # Step 1: SQL untuk dapat filter context
-        sql_prompt = f"""You are a SQL expert. Generate a SQLite query to extract filter values.
-
-{DB_SCHEMA}
-
-Rules:
-- Return ONLY distinct values needed as filters (seller_id, product_category_name_english, seller_city)
-- Use LIMIT 20
-- Return ONLY raw SQL, no markdown
-
-Question: {question}
-SQL:"""
+        sql_prompt = HYBRID_SQL_PROMPT.format(
+            question=question,
+            DB_SCHEMA=DB_SCHEMA
+        )
 
         sql_response = openai_client.chat.completions.create(
             model="gpt-4o-mini",
@@ -193,9 +186,18 @@ SQL:"""
             if "product_category_name_english" in row_dict and row_dict["product_category_name_english"]:
                 categories.add(row_dict["product_category_name_english"])
 
-        # Step 3: RAG search dengan atau tanpa metadata filter
+        # Step 3: Clarify query sebelum embed ke Qdrant
+        clarified = openai_client.chat.completions.create(
+            model="gpt-4o-mini",
+            messages=[
+                {"role": "system", "content": HYBRID_RAG_PROMPT},
+                {"role": "user", "content": question}
+            ],
+            temperature=0,
+        ).choices[0].message.content
+
         embed_response = openai_client.embeddings.create(
-            input=[question],
+            input=[clarified],
             model=EMBED_MODEL,
         )
         query_vector = embed_response.data[0].embedding
@@ -241,7 +243,8 @@ SQL:"""
                 f"   Review score: {review_score}/5\n"
                 f"   Info: {p.get('page_content', '')[:300]}...\n"
             )
-
+        translate_prompt = TRANSLATE_PROMPT.format(text="\n".join(output_lines))
+        return _translate_output("\n".join(output_lines), translate_prompt)
 
     except Exception as e:
         return f"Error hybrid search: {str(e)}"
