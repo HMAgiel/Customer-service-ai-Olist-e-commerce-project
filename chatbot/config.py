@@ -6,9 +6,9 @@ import os
 
 load_dotenv()
 
+
 turso_key = os.getenv("TURSO_DATABASE_TOKEN")
 turso_url = os.getenv("TURSO_DATABASE_URL")
-
 
 llm = ChatOpenAI(
     model="gpt-4o-mini",

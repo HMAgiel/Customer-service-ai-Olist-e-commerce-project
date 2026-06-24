@@ -14,6 +14,7 @@ from sqlalchemy import text
 from sqlalchemy.exc import SQLAlchemyError
 
 from langchain_core.messages import SystemMessage, HumanMessage
+from langchain_core.runnables import RunnableConfig
 from langchain.tools import tool
 from qdrant_client.models import Filter, FieldCondition, MatchAny
 from chatbot.prompt.prompts import SQL_PROMPT, SQL_EXAMPLE, HYBRID_SEARCH_PROMPT, TRANSLATE_PROMPT, DB_SCHEMA, SEARCH_PRODUCTS_PROMPT
@@ -31,7 +32,8 @@ def llm_call(query, prompt):
     response = llm_strict.invoke([
         SystemMessage(content=prompt),
         HumanMessage(content=query)
-    ])
+    ]
+)
     messages = response.content
     return messages
 
@@ -79,6 +81,7 @@ def search_products(query: str) -> str:
                 f"   Review score: {review_score}/5\n"
                 f"   Info: {p.get('page_content', '')[:300]}...\n"
             )
+        return "\n".join(output_lines)
 
     except Exception as e:
         return f"Error saat melakukan pencarian produk: {str(e)}"
@@ -200,7 +203,8 @@ def hybrid_search(question: str) -> str:
                 f"   Review score: {review_score}/5\n"
                 f"   Info: {p.get('page_content', '')[:300]}...\n"
             )
-
+        
+        return "\n".join(output_lines)
 
     except Exception as e:
         return f"Error hybrid search: {str(e)}"
