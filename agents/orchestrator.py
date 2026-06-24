@@ -103,18 +103,6 @@ def delete_session(session_id: str) -> None:
     _sessions.pop(session_id, None)
 
 
-# ── Tool executor ─────────────────────────────────────────────────────────────
-@observe(name="tool-execution")
-def execute_tool(tool_name: str, tool_args: dict) -> str:
-    print(f"[TOOL CALLED] {tool_name} | args: {tool_args}")
-    tool_fn = tool_map.get(tool_name)
-    if not tool_fn:
-        return f"Tool '{tool_name}' tidak ditemukan."
-    result = tool_fn.invoke(tool_args)
-    print(f"[TOOL RESULT] {str(result)[:200]}")
-    return str(result)
-
-
 # ── Main run ──────────────────────────────────────────────────────────────────
 @observe(name="olist-chat")
 def run(query: str, session_id: str = "default") -> str:

@@ -19,6 +19,7 @@ RULES
 - JOIN tables properly using the relationships below
 - review_score is in the order_items table JOIN with reviews, use AVG(review_score) for the average rating
 - For "best review" use AVG(review_score) instead of COUNT
+- Return all rows of query results, do not filter or summarize.
 
 RELATIONSHIPS
 - orders.order_id = order_items.order_id = payments.order_id

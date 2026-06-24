@@ -51,6 +51,8 @@ def search_products(query: str) -> str:
             ],
             temperature=0,
         ).choices[0].message.content
+
+        print(f"[DEBUG] clarified query: {clarified}")
         
         # 1. Gunakan clarified sebagai query ke Qdrant
         embed_response = openai_client.embeddings.create(
@@ -80,16 +82,16 @@ def search_products(query: str) -> str:
             metadata = p.get('metadata', {})
             category = metadata.get('Product_category') or metadata.get('product_category', 'unknown')
             review_score = metadata.get('review_score', 'N/A')
-    
+
             output_lines.append(
                 f"{i}. Kategori: {category}\n"
                 f"   Review score: {review_score}/5\n"
                 f"   Info: {p.get('page_content', '')[:300]}...\n"
             )
 
-
-            translate_prompt = TRANSLATE_PROMPT.format(text="\n".join(output_lines))
-            return _translate_output("\n".join(output_lines), translate_prompt)
+        # Di luar loop
+        translate_prompt = TRANSLATE_PROMPT.format(text="\n".join(output_lines))
+        return _translate_output("\n".join(output_lines), translate_prompt)
 
     except Exception as e:
         return f"Error saat melakukan pencarian produk: {str(e)}"
@@ -140,6 +142,7 @@ def query_database(question: str) -> str:
             row_dict = dict(zip(col_names, row))
             line = " | ".join(f"{k}: {v}" for k, v in row_dict.items())
             result_lines.append(f"  • {line}")
+
 
         result_lines.append(f"\nSQL yang dijalankan: {sql_query}")
         return "\n".join(result_lines)
