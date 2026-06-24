@@ -149,7 +149,7 @@ suggestions = [
     "Kategori produk apa yang paling banyak ordernya?",
     "Rekomendasi kategori produk peralatan dapur",
     "Seller mana yang punya revenue tertinggi?",
-    "Produk apa yang reviewnya paling bagus?",
+    "Kategori produk apa yang reviewnya paling bagus?",
     "Berapa rata-rata harga produk elektronik?",
     "Ada produk dari seller di São Paulo?",
 ]
