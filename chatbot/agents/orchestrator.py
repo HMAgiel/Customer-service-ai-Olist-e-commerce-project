@@ -10,7 +10,7 @@ Security features:
 
 from dotenv import load_dotenv
 from langchain_core.messages import HumanMessage, AIMessage, SystemMessage, ToolMessage
-from langfuse import observe
+from langfuse.decorators import observe
 
 from chatbot.config import llm
 
