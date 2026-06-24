@@ -19,7 +19,7 @@ import time
 import threading
 from collections import defaultdict
 
-from agents.orchestrator import run, delete_session
+from chatbot.agents.orchestrator import run, delete_session
 
 app = FastAPI(
     title="Olist E-commerce AI Assistant",
