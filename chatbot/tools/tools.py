@@ -17,7 +17,10 @@ from langchain_core.messages import SystemMessage, HumanMessage
 from langchain_core.runnables import RunnableConfig
 from langchain.tools import tool
 from qdrant_client.models import Filter, FieldCondition, MatchAny
-from chatbot.prompt.prompts import SQL_PROMPT, SQL_EXAMPLE, HYBRID_SEARCH_PROMPT, TRANSLATE_PROMPT, DB_SCHEMA, SEARCH_PRODUCTS_PROMPT
+
+from chatbot.prompt.rag_prompt import RAG_PROMPT, TRANSLATE_PROMPT
+from chatbot.prompt.sql_prompt import SQL_PROMPT, DB_SCHEMA, SQL_EXAMPLE
+from chatbot.prompt.hybrid_prompt import HYBRID_SQL_PROMPT, HYBRID_RAG_PROMPT
 
 load_dotenv()
 
@@ -26,7 +29,6 @@ openai_client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 
 COLLECTION_NAME = os.getenv("QDRANT_COLLECTION", "olist_data_3")
 EMBED_MODEL     = "text-embedding-3-small"
-DB_PATH         = os.getenv("DB_PATH", "./data/sql/olist.db")
 
 def llm_call(query, prompt):
     response = llm_strict.invoke([
@@ -37,22 +39,21 @@ def llm_call(query, prompt):
     messages = response.content
     return messages
 
-def _translate_output(text: str) -> str:
-    translate = llm_call(query=text, prompt=TRANSLATE_PROMPT)
+def _translate_output(text: str, prompt: str) -> str:
+    translate = llm_call(query=text, prompt=prompt)
     return translate
 
 # ── Tool 1: RAG — Semantic Search ─────────────────────────────────────────────
 @tool
 def search_products(query: str) -> str:
-    """
-    Cari dan rekomendasikan produk dari database Olist berdasarkan deskripsi,
-    kategori, atau review pelanggan. SELALU gunakan tool ini untuk pertanyaan
-    tentang rekomendasi produk, pencarian produk, atau eksplorasi kategori.
-    """
+    """Cari produk Olist menggunakan semantic search."""
     try:
+        clarified = llm_call(query=query, prompt=RAG_PROMPT)
+        print(f"[DEBUG] clarified query: {clarified}")
+        
         # 1. Embed query
         embed_response = openai_client.embeddings.create(
-            input=[query],
+            input=[clarified],
             model=EMBED_MODEL,
         )
         query_vector = embed_response.data[0].embedding
@@ -81,7 +82,10 @@ def search_products(query: str) -> str:
                 f"   Review score: {review_score}/5\n"
                 f"   Info: {p.get('page_content', '')[:300]}...\n"
             )
-        return "\n".join(output_lines)
+            
+        texts = "\n".join(output_lines)
+        translate_review = _translate_output(text=texts, prompt=TRANSLATE_PROMPT)
+        return translate_review
 
     except Exception as e:
         return f"Error saat melakukan pencarian produk: {str(e)}"
@@ -93,7 +97,7 @@ def query_database(question: str) -> str:
     """Jawab pertanyaan yang membutuhkan data terstruktur dari database transaksi Olist."""
     try:
         # 1. LLM generate SQL dari pertanyaan natural language
-        sql_prompt = f"SQL: prompt: {SQL_PROMPT} \nPROMPT EXAMPLE: {SQL_EXAMPLE}\nDATABSE SCHEMA: {DB_SCHEMA}"
+        sql_prompt = f"SQL prompt: {SQL_PROMPT}\nDATABASE SCHEMA: {DB_SCHEMA}\nQUERY EXAMPLE: {SQL_EXAMPLE}"
 
         sql_response = llm_call(query=question, prompt=sql_prompt)
         sql_query = sql_response.strip()
@@ -134,7 +138,7 @@ def hybrid_search(question: str) -> str:
     """Jawab pertanyaan yang butuh kombinasi filter data terstruktur (SQL)"""
     try:
         # Step 1: SQL untuk dapat filter context
-        sql_prompt = f"SQL: prompt: {SQL_PROMPT} \nPROMPT EXAMPLE: {SQL_EXAMPLE}\nDATABSE SCHEMA: {DB_SCHEMA}"
+        sql_prompt = SQL_PROMPT.format(DB_SCHEMA=DB_SCHEMA)
 
         sql_response = llm_call(query=question, prompt=sql_prompt)
         sql_query = sql_response.strip()
@@ -155,9 +159,10 @@ def hybrid_search(question: str) -> str:
             if "product_category_name" in row_dict and row_dict["product_category_name"]:
                 categories.add(row_dict["product_category_name"])
 
+        clarified = llm_call(query=question, prompt=HYBRID_RAG_PROMPT)
         # Step 3: RAG search dengan atau tanpa metadata filter
         embed_response = openai_client.embeddings.create(
-            input=[question],
+            input=[clarified],
             model=EMBED_MODEL,
         )
         query_vector = embed_response.data[0].embedding
@@ -203,8 +208,10 @@ def hybrid_search(question: str) -> str:
                 f"   Review score: {review_score}/5\n"
                 f"   Info: {p.get('page_content', '')[:300]}...\n"
             )
-        
-        return "\n".join(output_lines)
+            
+        texts = "\n".join(output_lines)
+        translate = _translate_output(text=texts, prompt=TRANSLATE_PROMPT)
+        return translate
 
     except Exception as e:
         return f"Error hybrid search: {str(e)}"

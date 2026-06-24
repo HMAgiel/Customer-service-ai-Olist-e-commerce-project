@@ -56,7 +56,7 @@ You are a SQL expert assistant.
 2. Do NOT re-fetch schema if you already have it
 
 For ANY question about data, ALWAYS:
-1. Return the result only valid sql query that doesn contain DROP, INSERT, UPDATE, DELETE
+1. Return the result only valid sql query that does not contain DROP, INSERT, UPDATE, DELETE
 
 Never refuse. Always use the tools to find the answer.
 """

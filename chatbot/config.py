@@ -9,6 +9,9 @@ load_dotenv()
 
 turso_key = os.getenv("TURSO_DATABASE_TOKEN")
 turso_url = os.getenv("TURSO_DATABASE_URL")
+QDRANT_URL = os.getenv("QDRANT_URL")
+QDRANT_API_KEY = os.getenv("QDRANT_API")
+
 
 llm = ChatOpenAI(
     model="gpt-4o-mini",
@@ -23,8 +26,8 @@ llm_strict = ChatOpenAI(
 )
 
 qdrant_client = QdrantClient(
-    url=os.getenv("QDRANT_URL"),
-    api_key=os.getenv("QDRANT_API_KEY"),
+    url=QDRANT_URL, 
+    api_key=QDRANT_API_KEY,
     timeout=60,
 )
 

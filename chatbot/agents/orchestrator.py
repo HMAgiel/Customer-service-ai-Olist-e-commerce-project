@@ -17,7 +17,7 @@ from langfuse import observe, get_client, propagate_attributes
 from opentelemetry.instrumentation.langchain import LangchainInstrumentor
 from chatbot.config import llm
 
-from chatbot.prompt.prompts import SYSTEM_PROMPT
+from chatbot.prompt.orchestrator_prompt import ORCHESTRATOR_PROMPT
 
 from chatbot.tools.tools import search_products, query_database, hybrid_search
 
@@ -84,7 +84,7 @@ def run(query: str, session_id: str = "default") -> str:
                 
                 # ── ReAct Loop ────────────────────────────────────────────────────────
                 history  = _get_history(session_id)
-                messages = [SystemMessage(content=SYSTEM_PROMPT)] + history + [HumanMessage(content=query)]
+                messages = [SystemMessage(content=ORCHESTRATOR_PROMPT)] + history + [HumanMessage(content=query)]
 
                 for _ in range(5):
                     response = llm_with_tools.invoke(messages)
