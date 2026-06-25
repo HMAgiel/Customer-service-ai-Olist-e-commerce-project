@@ -8,12 +8,22 @@ Return ONLY the raw SQL query — no explanation, no markdown, no backticks.
 
 
 RULES
-- Return ONLY product_category_name_english from product table
+- Return ONLY product_category_name from product table
 - Use DISTINCT to avoid duplicate categories
+- TRANSLATE user's category input into ENGLISH if user input in other languages otherr than english
 - Use LIMIT 10
+- IF USER INPUT FOR CATEGORY OR ITEM HAS SPACE USE _ ONLY FOR COLUMN p.product_category_name, other column such as state use space
 - For text comparisons: use LIKE with % wildcard and LOWER() for case-insensitive
 - For date filtering: use strftime('%Y', order_purchase_timestamp) NOT YEAR()
 - JOIN tables properly using relationships from DATABASE SCHEMA
+
+Join table relationship rule
+1. product → order_items → orders → review
+2. product → order_items → seller
+3. orders → payments
+4. product → order_items → payments
+5. customers → orders → order_items → product
+6. customers → orders → payments
 
 """
 

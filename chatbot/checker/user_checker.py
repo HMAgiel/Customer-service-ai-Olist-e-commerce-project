@@ -1,6 +1,6 @@
 import re
 from langchain_core.messages import HumanMessage, SystemMessage
-from chatbot.prompt.prompts import guard_prompt
+from chatbot.prompt.guard_prompt import guard_prompt
 from chatbot.config import llm
 
 # ── Prompt Injection Detector ─────────────────────────────────────────────────

@@ -56,7 +56,6 @@ def search_products(query: str) -> str:
             input=[clarified],
             model=EMBED_MODEL,
         )
-        
         query_vector = embed_response.data[0].embedding
 
         # 2. Search Qdrant
@@ -77,7 +76,7 @@ def search_products(query: str) -> str:
             metadata = p.get('metadata', {})
             category = metadata.get('Product_category') or metadata.get('product_category', 'unknown')
             review_score = metadata.get('review_score', 'N/A')
-
+    
             output_lines.append(
                 f"{i}. Kategori: {category}\n"
                 f"   Review score: {review_score}/5\n"
@@ -139,7 +138,7 @@ def hybrid_search(question: str) -> str:
     """Jawab pertanyaan yang butuh kombinasi filter data terstruktur (SQL)"""
     try:
         # Step 1: SQL untuk dapat filter context
-        sql_prompt = SQL_PROMPT.format(DB_SCHEMA=DB_SCHEMA)
+        sql_prompt = HYBRID_SQL_PROMPT.format(DB_SCHEMA=DB_SCHEMA)
 
         sql_response = llm_call(query=question, prompt=sql_prompt)
         sql_query = sql_response.strip()
