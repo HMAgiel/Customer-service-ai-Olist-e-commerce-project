@@ -15,6 +15,7 @@ build/
 venv/
 env/
 .venv/
+*.venv/
 
 # Data files (terlalu besar untuk GitHub)
 data/raw/
