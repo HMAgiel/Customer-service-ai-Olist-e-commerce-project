@@ -15,13 +15,13 @@ from langchain_core.messages import HumanMessage, AIMessage, SystemMessage, Tool
 from langfuse.langchain import CallbackHandler
 from langfuse import observe, get_client, propagate_attributes
 from opentelemetry.instrumentation.langchain import LangchainInstrumentor
-from chatbot.config import llm
+from chatbot.config import llm, llm_strict
 
 from chatbot.prompt.orchestrator_prompt import ORCHESTRATOR_PROMPT
+from chatbot.prompt.guard_prompt import query_chekcer_prompt, basic_prompt
+from chatbot.checker.checker_output import query_checker, basic_agent
 
 from chatbot.tools.tools import search_products, query_database, hybrid_search
-
-from chatbot.checker.user_checker import detect_injection, check_relevance
 
 LangchainInstrumentor().instrument()
 langfuse = get_client()
@@ -63,53 +63,45 @@ def run(query: str, session_id: str = "default") -> str:
                 as_type="span",
                 input={"query": query, "session_id": session_id}
             ) as trace:
-                # ── Security Layer 1: Prompt Injection Detection ──────────────────────
-                if detect_injection(query):
-                    print(f"[SECURITY] Prompt injection detected: {query[:100]}")
-                    trace.update(output="BLOCKED: INJECTION", level="WARNING")
-                    return (
-                        "Maaf, permintaan ini tidak dapat diproses. "
-                        "Silakan ajukan pertanyaan seputar data Olist E-commerce."
-                    )
-
-                # ── Security Layer 2: Relevance Guard ────────────────────────────────
-                if not check_relevance(query):
-                    print(f"[GUARD] Irrelevant query rejected: {query[:100]}")
-                    trace.update(output="BLOCKED: irrelevant", level="WARNING")
-                    return (
-                        "Maaf, pertanyaan ini di luar konteks dataset Olist. "
-                        "Saya hanya bisa membantu analisis data e-commerce Brazil seperti "
-                        "produk, pesanan, seller, review, dan pembayaran."
-                    )
-                
-                # ── ReAct Loop ────────────────────────────────────────────────────────
                 history  = _get_history(session_id)
-                messages = [SystemMessage(content=ORCHESTRATOR_PROMPT)] + history + [HumanMessage(content=query)]
+                # ── Security Layer 1: Prompt Injection Detection ──────────────────────
+                prompt_checker = query_chekcer_prompt.format(history=history)
+                query_check = query_checker(question=query, prompt=prompt_checker)
+                
+                if query_check:
+                    # ── ReAct Loop ────────────────────────────────────────────────────────
+                    messages = [SystemMessage(content=ORCHESTRATOR_PROMPT)] + history + [HumanMessage(content=query)]
 
-                for _ in range(5):
-                    response = llm_with_tools.invoke(messages)
-                    messages.append(response)
+                    for _ in range(5):
+                        response = llm_with_tools.invoke(messages)
+                        messages.append(response)
 
-                    if not response.tool_calls:
-                        print(f"\n[FINAL ANSWER] No tool calls, returning answer directly")
-                        ai_reply = response.content
-                        _save_turn(session_id, query, ai_reply)
-                        return ai_reply
+                        if not response.tool_calls:
+                            print(f"\n[FINAL ANSWER] No tool calls, returning answer directly")
+                            ai_reply = response.content
+                            _save_turn(session_id, query, ai_reply)
+                            return ai_reply
 
-                    # Log + execute tool calls
-                    print(f"\n[TOOL CALLS DETECTED] {len(response.tool_calls)} tool(s):")
-                    for tc in response.tool_calls:
-                        print(f"  → Tool: {tc['name']} | Args: {tc['args']}")
-                        tool_fn = tool_map.get(tc["name"])
-                        if tool_fn:
-                            result = tool_fn.invoke(tc["args"])
-                            print(f"  ← Result preview: {str(result)[:150]}")
-                            messages.append(ToolMessage(
-                                content=str(result),
-                                tool_call_id=tc["id"],
-                            ))
-                trace.update(output="MAX_ITER", level="WARNING")
-                return "Maaf, tidak bisa menyelesaikan permintaan dalam batas iterasi."
+                        # Log + execute tool calls
+                        print(f"\n[TOOL CALLS DETECTED] {len(response.tool_calls)} tool(s):")
+                        for tc in response.tool_calls:
+                            print(f"  → Tool: {tc['name']} | Args: {tc['args']}")
+                            tool_fn = tool_map.get(tc["name"])
+                            if tool_fn:
+                                result = tool_fn.invoke(tc["args"])
+                                print(f"  ← Result preview: {str(result)[:150]}")
+                                messages.append(ToolMessage(
+                                    content=str(result),
+                                    tool_call_id=tc["id"],
+                                ))
+                    trace.update(output="MAX_ITER", level="WARNING")
+                    return "Maaf, tidak bisa menyelesaikan permintaan dalam batas iterasi."
+                
+                else:
+                    prompt_basic_agent = basic_prompt.format(history=history)
+                    basic_response = basic_agent(question=query, prompt=prompt_basic_agent)
+                    _save_turn(session_id, query, basic_response)
+                    return basic_response
 
     except Exception as e:
         # Jangan leak detail error ke user — log saja di server

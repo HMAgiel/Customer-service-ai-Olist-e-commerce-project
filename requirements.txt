@@ -20,6 +20,9 @@ qdrant-client==1.15.1
 SQLAlchemy==2.0.51
 sqlalchemy-libsql==0.2.0
 
+#pydantic
+pydantic==2.9.2
+
 # Observability
 langfuse==4.11.0
 
