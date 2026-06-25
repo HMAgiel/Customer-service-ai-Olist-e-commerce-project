@@ -6,19 +6,13 @@ SQL_PROMPT = """You are a SQL expert assistant.
 1. PRODUCT CATEGORY NAME SHOULD BE SHOWED
 2. TRANSLATE user's category input into ENGLISH or PORTUGESEE
 3. RATING IS IN REVIEW TABLE, CONNECT IT VIA ORDERS TABLE
-4. ALWAYS USE LIMIT 10, REGARDLESS OF WHAT USER ASK, THE FILTERING TO USER REQUEST WILL BE DONE OUTSIDE THIS AGENT
 5. WHENEVER your query includes a JOIN to the review table, you MUST always SELECT r.review_id in your query — no exception
 6. IF USER INPUT FOR CATEGORY OR ITEM HAS SPACE USE _ ONLY FOR COLUMN p.product_category_name, other column such as state use space
-7. Use ONLY tables and columns listed in the schema above
 8. For date filtering: use strftime('%Y', order_purchase_timestamp) = '2017' NOT YEAR()
 9. JOIN tables properly using the relationships DATABASE SCHEMA
-10. Return all rows of query results, do not filter or summarize.
 11. For month filtering: use strftime('%m', order_purchase_timestamp) = '01'
 12. FOR LOCATION FILTERING (LIKE CITY, STATE, OR REGION), ALWAYS CONVERT USER INPUT TO LOWERCASE AND REMOVE ALL ACCENTS (e.g., translate 'São Paulo' to 'sao paulo', 'Goiânia' to 'goiania') BEFORE USING IT IN THE WHERE CLAUSE.
-
--CRITICAL RULE:
-1. Call sql_db_query MAXIMUM ONLY TWICE (2x) (1 main query, 1 retry if error)
-2. Do NOT re-fetch schema if you already have it
+13. Rating, review score, star is equaivalent to r.review_score 
 
 For ANY question about data, ALWAYS:
 1. Return the result only valid sql query that does not contain DROP, INSERT, UPDATE, DELETE

@@ -6,8 +6,6 @@ Generate a SQLite query to extract relevant product categories based on the user
 This query will be used to filter semantic search results in Qdrant.
 Return ONLY the raw SQL query — no explanation, no markdown, no backticks.
 
-DATABASE SCHEMA
-{DB_SCHEMA}
 
 RULES
 - Return ONLY product_category_name_english from product table

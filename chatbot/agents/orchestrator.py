@@ -60,7 +60,7 @@ def run(query: str, session_id: str = "default") -> str:
         with propagate_attributes(session_id=session_id):
             with langfuse.start_as_current_observation(
                 name="olist-chat",
-                as_type="orchestrator",
+                as_type="span",
                 input={"query": query, "session_id": session_id}
             ) as trace:
                 # ── Security Layer 1: Prompt Injection Detection ──────────────────────
