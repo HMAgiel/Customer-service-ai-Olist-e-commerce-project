@@ -4,8 +4,6 @@ RAG tool (Qdrant semantic search) + SQL tool (GPT generate → SQLite execute)
 """
 
 import os
-import sqlite3
-import json
 from dotenv import load_dotenv
 from openai import OpenAI
 
@@ -14,7 +12,6 @@ from sqlalchemy import text
 from sqlalchemy.exc import SQLAlchemyError
 
 from langchain_core.messages import SystemMessage, HumanMessage
-from langchain_core.runnables import RunnableConfig
 from langchain.tools import tool
 from qdrant_client.models import Filter, FieldCondition, MatchAny
 
