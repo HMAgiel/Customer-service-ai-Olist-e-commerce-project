@@ -26,9 +26,6 @@ pydantic==2.9.2
 # Observability
 langfuse==4.11.0
 
-# Streamlit
-streamlit==1.39.0
-
 # Utils
 python-dotenv==1.0.1
 pydantic==2.9.2
