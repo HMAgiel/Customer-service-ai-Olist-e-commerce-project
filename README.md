@@ -17,32 +17,30 @@ cd Repo-Final-Project-Kelompok-3
 git checkout Fajri/olist-chatbot
 ```
 
-### 2. Install dependencies
+### 2. Buat env di foler frontend dan backend
+1. pada backend isinya meliputi
 ```bash
-pip install -r requirements.txt
+OPENAI_API_KEY=sk
+QDRANT_API=ey
+QDRANT_URL=ht
+
+LANGFUSE_SECRET_KEY=sk
+LANGFUSE_PUBLIC_KEY=pk
+LANGFUSE_BASE_URL=https
+
+TURSO_DATABASE_TOKEN=ey
+TURSO_DATABASE_URL=li
 ```
 
-### 3. Setup environment variables
-Buat file `.env` di root folder:
-OPENAI_API_KEY=your_openai_api_key
-
-QDRANT_URL=your_qdrant_url
-QDRANT_API_KEY=your_qdrant_api_key
-QDRANT_COLLECTION=olist_data_3
-
-DB_PATH=./data/sql/olist.db
-
-### 4. Setup database
-Download `olist.db` dari Google Drive (link minta ke tim), taruh di `data/sql/olist.db`
-
-### 5. Jalanin FastAPI
+2. pada front end isinya adalah
 ```bash
-uvicorn api.main:app --reload --port 8000
+API_URL=http
 ```
 
-### 6. Jalanin Streamlit (terminal baru)
+### 3. Cara menjalankan docker compose
+- Docper di dekstop atau terminal perlu dijalankan terlebih dahulu
+- jika docker tidak bekerja berarti ada masalah pada docker anda
+- berikut langkah menjalankan docker compose:
 ```bash
-streamlit run streamlit_app/app.py
+docker compose up --build
 ```
-
-Streamlit akan buka otomatis di `http://localhost:8501`
