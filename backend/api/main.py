@@ -12,7 +12,7 @@ Security features:
 
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, RedirectResponse
 from pydantic import BaseModel, field_validator
 import uuid
 import time
@@ -30,7 +30,9 @@ app = FastAPI(
 # CORS — restrict ke origin yang dikenal saja
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:8501", "http://127.0.0.1:8501"],  # Streamlit only
+    allow_origins=["http://localhost:8501", 
+                   "http://127.0.0.1:8501",
+                   "http://frontend:8501"],  # Streamlit only
     allow_methods=["GET", "POST", "DELETE"],
     allow_headers=["Content-Type"],
 )
@@ -121,6 +123,11 @@ async def http_exception_handler(request: Request, exc: HTTPException):
 
 
 # ── Endpoints ─────────────────────────────────────────────────────────────────
+@app.get("/", include_in_schema=False)
+def redirect_docs():
+    return RedirectResponse(url="/docs")
+
+
 @app.get("/health")
 def health_check():
     """Cek apakah API jalan."""

@@ -17,8 +17,9 @@ opentelemetry.instrumentation.langchain
 qdrant-client==1.15.1
 
 # SQL
-SQLAlchemy==2.0.51
-sqlalchemy-libsql==0.2.0
+SQLAlchemy
+sqlalchemy-libsql
+libsql-client
 
 #pydantic
 pydantic==2.9.2
