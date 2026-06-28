@@ -516,6 +516,16 @@ The `docker-compose.yml` defines two services connected via a bridge network:
 
 ---
 
+## Team
+
+| Name | Role |
+|---|---|
+| Fajri Algifari | AI Orchestration & prompt engineering — Orchestrator, Tools, Prompt Engineering, FastAPI, Langfuse, agent checker|
+| Hasyim M. Agiel | Data Engineer & refractoring  — SQLite pipeline, Qdrant ingestion, data cleaning, feature engineering, file refractor, docker|
+| Michael Joseph | QA & Monitoring — Streamlit, end-to-end testing, Deployment|
+
+---
+
 ## 🤝 Contributing
 
 Contributions are welcome! To contribute:
