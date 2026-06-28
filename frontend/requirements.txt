@@ -1,0 +1,5 @@
+# Utils
+python-dotenv==1.0.1
+
+# Streamlit
+streamlit==1.39.0
