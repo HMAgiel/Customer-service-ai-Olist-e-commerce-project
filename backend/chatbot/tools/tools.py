@@ -62,22 +62,34 @@ def search_products(query: str) -> str:
             limit=5,
             with_payload=True,
         ).points
-
+        
+        seen_categories = set()
+        unique_results = []
+        for hit in results:
+            metadata = hit.payload.get('metadata', {})
+            category = metadata.get('Product_category') or metadata.get('product_category', '')
+            if category not in seen_categories:
+                seen_categories.add(category)
+                unique_results.append(hit)
+        results = unique_results
+        
         if not results:
             return "Tidak ditemukan produk yang relevan dengan pencarian tersebut."
 
         # 3. Format hasil
-        output_lines = [f"Ditemukan {len(results)} produk relevan:\n"]
+        output_lines = [f"Found {len(results)} relevant products (filtered):\n"]
         for i, hit in enumerate(results, 1):
             p = hit.payload
-            metadata = p.get('metadata', {})
-            category = metadata.get('Product_category') or metadata.get('product_category', 'unknown')
-            review_score = metadata.get('review_score', 'N/A')
-    
+            metadata = p.get("metadata", {})
+            category = metadata.get("Product_category") or metadata.get("product_category", "unknown")
+            review_score = metadata.get("review_score", "N/A")
+            review_text = p.get("page_content", "") or p.get("text", "") or p.get("content", "")
+            review_text = review_text[:200] if review_text else "Tidak ada review"
+
             output_lines.append(
                 f"{i}. Kategori: {category}\n"
                 f"   Review score: {review_score}/5\n"
-                f"   Info: {p.get('page_content', '')[:300]}...\n"
+                f"   Review: {review_text}\n"
             )
             
         texts = "\n".join(output_lines)
@@ -156,7 +168,8 @@ def hybrid_search(question: str) -> str:
             if "product_category_name" in row_dict and row_dict["product_category_name"]:
                 categories.add(row_dict["product_category_name"])
 
-        clarified = llm_call(query=question, prompt=HYBRID_RAG_PROMPT)
+        rag_prompt = HYBRID_RAG_PROMPT.format(categories)
+        clarified = llm_call(query=question, prompt=rag_prompt)
         # Step 3: RAG search dengan atau tanpa metadata filter
         embed_response = openai_client.embeddings.create(
             input=[clarified],
@@ -181,6 +194,17 @@ def hybrid_search(question: str) -> str:
                 limit=5,
                 with_payload=True,
             ).points
+            
+            seen_categories = set()
+            unique_results = []
+            for hit in results:
+                metadata = hit.payload.get('metadata', {})
+                category = metadata.get('Product_category') or metadata.get('product_category', '')
+                if category not in seen_categories:
+                    seen_categories.add(category)
+                    unique_results.append(hit)
+            results = unique_results
+            
         else:
             # Fallback tanpa filter kalau tidak ada kategori
             results = qdrant_client.query_points(
@@ -189,6 +213,16 @@ def hybrid_search(question: str) -> str:
                 limit=5,
                 with_payload=True,
             ).points
+            
+            seen_categories = set()
+            unique_results = []
+            for hit in results:
+                metadata = hit.payload.get('metadata', {})
+                category = metadata.get('Product_category') or metadata.get('product_category', '')
+                if category not in seen_categories:
+                    seen_categories.add(category)
+                    unique_results.append(hit)
+            results = unique_results
 
         if not results:
             return "Tidak ditemukan produk yang relevan dengan kriteria tersebut."
@@ -200,10 +234,13 @@ def hybrid_search(question: str) -> str:
             metadata = p.get("metadata", {})
             category = metadata.get("Product_category") or metadata.get("product_category", "unknown")
             review_score = metadata.get("review_score", "N/A")
+            review_text = p.get("page_content", "") or p.get("text", "") or p.get("content", "")
+            review_text = review_text[:200] if review_text else "Tidak ada review"
+
             output_lines.append(
                 f"{i}. Kategori: {category}\n"
                 f"   Review score: {review_score}/5\n"
-                f"   Info: {p.get('page_content', '')[:300]}...\n"
+                f"   Review: {review_text}\n"
             )
             
         texts = "\n".join(output_lines)

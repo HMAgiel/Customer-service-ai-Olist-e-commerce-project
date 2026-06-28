@@ -9,20 +9,24 @@ class ChekerOutput(BaseModel):
 
 llm_checker = llm_strict.with_structured_output(ChekerOutput)
 
-def query_checker(question, prompt):
-    response =  llm_checker.invoke(
-        [
-            SystemMessage(content=prompt),
-            HumanMessage(content=question)
-        ]
-    )
+def query_checker(question, prompt, history=None):
+    messages = [SystemMessage(content=prompt)]
+    
+    # tambah bagian ini
+    if history:
+        messages.extend(history)
+    
+    messages.append(HumanMessage(content=question))
+    response = llm_checker.invoke(messages)
     return response.validation
 
-def basic_agent(question, prompt):
-    response =  llm.invoke(
-        [
-            SystemMessage(content=prompt),
-            HumanMessage(content=question)
-        ]
-    )
+def basic_agent(question, prompt, history=None):
+    messages = [SystemMessage(content=prompt)]
+    
+    # tambah bagian ini
+    if history:
+        messages.extend(history)
+    
+    messages.append(HumanMessage(content=question))
+    response = llm.invoke(messages)
     return response.content

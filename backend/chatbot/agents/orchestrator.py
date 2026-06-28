@@ -65,8 +65,8 @@ def run(query: str, session_id: str = "default") -> str:
             ) as trace:
                 history  = _get_history(session_id)
                 # ── Security Layer 1: Prompt Injection Detection ──────────────────────
-                prompt_checker = query_chekcer_prompt.format(history=history)
-                query_check = query_checker(question=query, prompt=prompt_checker)
+                prompt_checker = query_chekcer_prompt
+                query_check = query_checker(question=query, prompt=prompt_checker, history=history)
                 
                 if query_check:
                     # ── ReAct Loop ────────────────────────────────────────────────────────
@@ -98,8 +98,14 @@ def run(query: str, session_id: str = "default") -> str:
                     return "Maaf, tidak bisa menyelesaikan permintaan dalam batas iterasi."
                 
                 else:
-                    prompt_basic_agent = basic_prompt.format(history=history)
-                    basic_response = basic_agent(question=query, prompt=prompt_basic_agent)
+                    print(f"\n[BASIC AGENT] Query tidak relevan/injection detected, routing ke basic agent")
+                    print(f"  → Query: {query}")
+
+                    prompt_basic_agent = basic_prompt
+                    basic_response = basic_agent(question=query, prompt=prompt_basic_agent, history=history)
+
+                    print(f"  ← Basic agent response: {basic_response[:100]}")
+                    
                     _save_turn(session_id, query, basic_response)
                     return basic_response
 
