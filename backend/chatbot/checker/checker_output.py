@@ -11,6 +11,8 @@ llm_checker = llm_strict.with_structured_output(ChekerOutput)
 
 def query_checker(question, prompt, history=None):
     messages = [SystemMessage(content=prompt)]
+    print(f"[DEBUG] History received: {history}")  # tambah ini
+    print(f"[DEBUG] Question: {question}")
     
     # tambah bagian ini
     if history:

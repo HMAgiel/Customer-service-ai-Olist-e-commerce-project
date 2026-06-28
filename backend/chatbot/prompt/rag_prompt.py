@@ -12,7 +12,6 @@ Each product has the following fields:
 - review: product review by user
 
 OUTPUT RULES
-- Display a maximum of 5 products
 - For each product display: category, and review
 - Answer in the same language as the user's question
 - If there are no relevant products, say so honestly

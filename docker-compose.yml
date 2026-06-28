@@ -29,9 +29,6 @@ services:
       - app-network
     env_file:
       - frontend/.env.frontend
-    depends_on:
-      backend:
-        condition: service_healthy
 
 networks:
   app-network:

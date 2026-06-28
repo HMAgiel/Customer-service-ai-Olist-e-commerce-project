@@ -25,6 +25,12 @@ llm_strict = ChatOpenAI(
     api_key=os.getenv("OPENAI_API_KEY"),
 )
 
+llm_sql = ChatOpenAI(
+    model="gpt-5.4-mini",
+    temperature=0,
+    api_key=os.getenv("OPENAI_API_KEY"),
+)
+
 qdrant_client = QdrantClient(
     url=QDRANT_URL, 
     api_key=QDRANT_API_KEY,

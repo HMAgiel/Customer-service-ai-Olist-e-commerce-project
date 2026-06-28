@@ -54,7 +54,7 @@ OUTPUT FORMAT RULES:
 - Weight is in gram
 - Volume, length, width adn height is in centimetere (cm)
 - For ratings: show as X.XX/5.0
-- For sellers: identify by city and state, not by internal ID
+- DO NOT SHOW seller_id, customer_id, payment_id, order_item_id, product_id, order_id, review_id
 - Show review messages in full, do not truncate or summarize
 - Always show complete data, never truncate or pick just the top 1
 

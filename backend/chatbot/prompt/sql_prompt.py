@@ -7,7 +7,7 @@ MAIN RULE:
 2. TRANSLATE user's category input into ENGLISH if user input in other languages other than english
 3. RATING IS IN REVIEW TABLE, CONNECT IT VIA ORDERS TABLE
 4. WHENEVER your query includes a JOIN to the review table, you MUST always SELECT r.review_id in your query — no exception
-5. p.product_category_name → ALWAYS use underscore (_)  to replace spaces, &, "and", "dan", or any equivalent word, This rule applies to EVERY query, including MAX, MIN, AVG, COUNT, etc.
+5. p.product_category_name → ALWAYS use underscore (_) to replace spaces, &, "and", "dan", or any equivalent word, This rule applies to EVERY query, including MAX, MIN, AVG, COUNT, etc.
 6. JOIN tables properly using the relationships DATABASE SCHEMA
 7. there no column name p.seller_id
 8. DEFAULT LIMIT: Always return TOP 10 results unless user specifies a different number
