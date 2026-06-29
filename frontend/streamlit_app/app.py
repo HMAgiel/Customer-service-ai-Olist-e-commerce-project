@@ -79,11 +79,8 @@ def send_message(user_input: str) -> str:
         # Simpan session_id dari response pertama
         st.session_state.session_id = data["session_id"]
         answer = (
-            data.get("result") or
             data.get("answer") or
-            data.get("response") or
-            data.get("message") or
-            str(data)  # fallback: tampilkan semua
+            str(data)
         )
         return answer
     except requests.exceptions.Timeout:
@@ -192,12 +189,15 @@ user_input = st.chat_input("Ketik pertanyaan Anda di sini...") or pending
 if user_input:
     # Tampilkan pesan user
     st.session_state.messages.append({"role": "user", "content": user_input})
+    with st.chat_message("user"):
+        st.markdown(user_input)
 
     # Kirim ke API dan tampilkan response
-    with st.spinner("Agent sedang memproses..."):
-        answer = send_message(user_input)
-    st.markdown(answer)
-
+    with st.chat_message("assistant"):
+        with st.spinner("Agent sedang memproses..."):
+            answer = send_message(user_input)
+        st.markdown(answer)
+        
     st.session_state.messages.append({"role": "assistant", "content": answer})
     
     st.rerun()
