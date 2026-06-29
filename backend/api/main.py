@@ -36,7 +36,7 @@ app.add_middleware(
     allow_origins=["http://localhost:8501", 
                    "http://127.0.0.1:8501",
                    "http://frontend:8501",
-                   frontend_url],  # Streamlit only
+                   frontend_url], 
     allow_credentials=True,
     allow_methods=["GET", "POST", "DELETE"],
     allow_headers=["*"],
