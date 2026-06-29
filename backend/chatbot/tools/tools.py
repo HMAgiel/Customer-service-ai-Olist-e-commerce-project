@@ -64,7 +64,7 @@ def search_products(query: str) -> str:
         
         # 1. Embed query
         embed_response = openai_client.embeddings.create(
-            input=[query],
+            input=[clarified],
             model=EMBED_MODEL,
         )
         query_vector = embed_response.data[0].embedding
@@ -192,7 +192,7 @@ def hybrid_search(question: str) -> str:
         clarified = llm_call(model=llm_strict, query=question, prompt=rag_prompt)
         # Step 3: RAG search dengan atau tanpa metadata filter
         embed_response = openai_client.embeddings.create(
-            input=[question],
+            input=[clarified],
             model=EMBED_MODEL,
         )
         query_vector = embed_response.data[0].embedding

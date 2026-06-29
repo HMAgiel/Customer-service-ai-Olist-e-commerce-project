@@ -6,6 +6,8 @@ services:
       dockerfile: Dockerfile
     ports:
       - "8000:8000"
+    environment:
+      - PORT=8000
     networks:
       - app-network
     env_file:
@@ -25,6 +27,8 @@ services:
       dockerfile: Dockerfile
     ports:
       - "8501:8501"
+    environment:
+      - PORT=8501
     networks:
       - app-network
     env_file:
