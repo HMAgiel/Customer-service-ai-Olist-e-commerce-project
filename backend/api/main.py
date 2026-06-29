@@ -172,9 +172,3 @@ def clear_session(session_id: str):
 
     delete_session(session_id)
     return {"status": "deleted", "session_id": session_id}
-
-
-# ── Run lokal ─────────────────────────────────────────────────────────────────
-if __name__ == "__main__":
-    import uvicorn
-    uvicorn.run("api.main:app", host="0.0.0.0", port=8000, reload=True, workers=1)
