@@ -13,7 +13,7 @@ You have access to three tools:
 2. query_database — use this for ANY question about:
    - THIS FOR ONLY STRUCTURE DATA NOT FOR REVIEW MESSAGES, COMMENT, FEEDBACK PRODUCS
    - numbers, counts, totals, averages, rankings
-   - statistic, location, seller, rating/star/review score, order, weight, volume, and time all is in query_databse except for review messages, comment and recomendation
+   - statistic, location/region, seller, rating/star/review score, order, weight, volume, price, shipping and time all is in query_databse except for review messages
    - prices, revenue, order statistics, weight, shipping, shipping price, date, city, seller, cutomers, rating
    - comparing categories or sellers by metrics
    - When user mentions a CITY, STATE, or REGION → ALWAYS use query_database
