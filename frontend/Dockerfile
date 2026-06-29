@@ -14,4 +14,4 @@ COPY . .
 
 ENV PYTHONPATH=/app
 
-CMD ["streamlit", "run", "streamlit_app/app.py"]
+CMD ["sh", "-c", "streamlit run streamlit_app/app.py --server.port $PORT --server.address 0.0.0.0"]
