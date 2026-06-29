@@ -39,7 +39,6 @@ app.add_middleware(
                    frontend_url],  # Streamlit only
     allow_credentials=True,
     allow_methods=["GET", "POST", "DELETE"],
-    allow_headers=["Content-Type"],
     allow_headers=["*"],
 )
 
