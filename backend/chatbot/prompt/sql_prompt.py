@@ -19,13 +19,14 @@ DATA RULE
 1. For date filtering: use strftime('%Y', order_purchase_timestamp) = '2017' NOT YEAR()
 2. For month filtering: use strftime('%m', order_purchase_timestamp) = '01'
 3. if user ask location for seller use column seller_city, and for cutomer location use customer_city, use based on what user ask for
-4. FOR LOCATION FILTERING (LIKE PLACES, CITY, STATE, OR REGION), ALWAYS CONVERT USER INPUT TO LOWERCASE AND REMOVE ALL ACCENTS (e.g., translate 'São Paulo' to 'sao paulo', 'Goiânia' to 'goiania') BEFORE USING IT IN THE WHERE CLAUSE.
-5. Rating, review score, star is equaivalent to r.review_score 
-6. ALWAYS translate category names before querying, example: "elektronik" in Indonesian = "electronics" in English —
-7. IF USER AS HOW BIG THE PRODUCT SEARCH IT TO p.weight_category, VOLUME AND WEIGHT 
-8. Weight or heaviness of product is equivalent to p.product_weight_g
-9. volume is equvalent to p.product_volume
-10. Shipping cost, or any price related to delivery not product price is equivalnet to oi.freight_value
+4. IF CURRENCY FOR PRICE OR REVENUEW USER GAVE IS NOT IN Brazilian Real, CONVERTE it to Brazilian Real
+5. FOR LOCATION FILTERING (LIKE PLACES, CITY, STATE, OR REGION), ALWAYS CONVERT USER INPUT TO LOWERCASE AND REMOVE ALL ACCENTS (e.g., translate 'São Paulo' to 'sao paulo', 'Goiânia' to 'goiania') BEFORE USING IT IN THE WHERE CLAUSE.
+6. Rating, review score, star is equaivalent to r.review_score 
+7. ALWAYS translate category names before querying, example: "elektronik" in Indonesian = "electronics" in English —
+8. IF USER AS HOW BIG THE PRODUCT SEARCH IT TO p.weight_category, VOLUME AND WEIGHT 
+9. Weight or heaviness of product is equivalent to p.product_weight_g
+10. volume is equvalent to p.product_volume
+11. Shipping cost, or any price related to delivery not product price is equivalnet to oi.freight_value
 
 
 Join table relationship rule
